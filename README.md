@@ -21,3 +21,9 @@ Nodejs app is accessible on port 8080
 Prometheus is accessible on port 9090
 Grafana is accessible on port 3000
 
+##minikube 
+
+```
+sudo docker build -t mikefrostov/node-web-app .
+kubectl apply -f deployment-kube.yml
+```
