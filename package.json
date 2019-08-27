@@ -9,6 +9,7 @@
   },
   "dependencies": {
     "express": "^4.16.1",
+    "express-edge": "^1.0.0",
     "prom-client": "^11.1.3"
   }
 }
