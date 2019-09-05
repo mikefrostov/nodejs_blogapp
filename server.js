@@ -4,7 +4,7 @@ const express = require('express');
 const Prometheus = require('prom-client');
 const expressEdge = require('express-edge');
 const app = express();
-const port = process.env.PORT || 8080;
+const port = process.env.PORT || 8081;
 const metricsInterval = Prometheus.collectDefaultMetrics();
 const httpRequestDurationMicroseconds = new Prometheus.Histogram({
   name: 'http_request_duration_ms',
@@ -33,6 +33,9 @@ app.get('/', (req, res, next) => {
 //	res.render('index');
 //});
 
+app.get('/test', function (req, res) {
+	res.send('hello world');
+});
 
 app.get('/bad', (req, res, next) => {
   next(new Error('My Error'));
@@ -48,8 +51,8 @@ app.get('/metrics', (req, res) => {
 app.use((err, req, res, next) => {
   res.statusCode = 500
   // Do not expose your error in production
-  res.json({ error: err.message })
-  next()
+  res.json({ error: err.message });
+  next();
 });
 
 // Runs after each requests
@@ -60,12 +63,12 @@ app.use((req, res, next) => {
     .labels(req.method, req.path, res.statusCode)
     .observe(responseTimeInMs)
 
-  next()
-})
+  next();
+});
 
 const server = app.listen(port, () => {
   console.log(`Example app listening on port ${port}!`)
-})
+});
 
 // Graceful shutdown
 process.on('SIGTERM', () => {
@@ -78,5 +81,8 @@ process.on('SIGTERM', () => {
     }
 
     process.exit(0)
-  })
-})
+  });
+});
+
+
+module.exports = app;
