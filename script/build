@@ -1,0 +1,9 @@
+#!/bin/bash
+set -e 
+cd ~/jenkinsautobuilds/nodejs_blogapp/
+git pull
+sudo docker stop $(sudo docker ps -q --filter ancestor=mikefrostov/nodejs_blogapp )
+sudo docker rm $(sudo docker ps --all -q --filter ancestor=mikefrostov/nodejs_blogapp )
+sudo docker build -t mikefrostov/nodejs_blogapp . 
+sudo docker run -d -p 8081:8081 mikefrostov/nodejs_blogapp
+
