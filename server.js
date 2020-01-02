@@ -6,6 +6,7 @@ const expressEdge = require('express-edge');
 const app = express();
 const port = process.env.PORT || 8081;
 const metricsInterval = Prometheus.collectDefaultMetrics();
+const mongoose = require('mongoose');
 const httpRequestDurationMicroseconds = new Prometheus.Histogram({
   name: 'http_request_duration_ms',
   help: 'Duration of HTTP requests in ms',
@@ -18,8 +19,13 @@ app.use((req, res, next) => {
   res.locals.startEpoch = Date.now();
   next();
 });
+
 app.use(express.static('public'));
 app.use(expressEdge);
+mongoose.connect('mongodb://localhost:27017/node-blog', { useNewUrlParser: true })
+    .then(() => 'You are now connected to Mongo!')
+    .catch(err => console.error('Something went wrong', err))
+
 app.set('views', __dirname + '/views');
 //console.log('dirname is : ' + __dirname)
 app.get('/', (req, res, next) => {
