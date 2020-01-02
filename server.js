@@ -47,6 +47,9 @@ app.get('/bad', (req, res, next) => {
   next(new Error('My Error'));
 });
 
+app.get('/posts/new', (req, res) => {
+    res.render('create')
+});
 
 app.get('/metrics', (req, res) => {
   res.set('Content-Type', Prometheus.register.contentType)
