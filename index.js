@@ -1,5 +1,6 @@
 'use strict'
 
+const path = require('path');
 const express = require('express');
 const Prometheus = require('prom-client');
 const expressEdge = require('express-edge');
@@ -9,6 +10,7 @@ const metricsInterval = Prometheus.collectDefaultMetrics();
 const mongoose = require('mongoose');
 const bodyParser = require('body-parser');
 const Post = require('./database/models/Post');
+const fileUpload = require("express-fileupload");
 const httpRequestDurationMicroseconds = new Prometheus.Histogram({
   name: 'http_request_duration_ms',
   help: 'Duration of HTTP requests in ms',
@@ -22,13 +24,16 @@ app.use((req, res, next) => {
   next();
 });
 
+app.use(fileUpload());
 app.use(express.static('public'));
 app.use(expressEdge);
 mongoose.connect('mongodb://localhost:27017/node-blog', { useNewUrlParser: true })
     .then(() => 'You are now connected to Mongo!')
     .catch(err => console.error('Something went wrong', err))
 
+
 app.set('views', __dirname + '/views');
+
 
 app.use(bodyParser.json())
 app.use(bodyParser.urlencoded({
@@ -66,9 +71,18 @@ app.get('/new', (req, res) => {
 
 
 app.post('/store', (req, res) => {
-    Post.create(req.body, (error, post) => {
-        res.redirect('/')
-    })
+    const {
+        image
+    } = req.files
+
+    image.mv(path.resolve(__dirname, 'public/', image.name), (error) => {
+    Post.create({
+	...req.body, 
+	image: `${image.name}`
+    }, (error, post) => {
+        res.redirect('/');
+    });
+  })
 });
 
 
