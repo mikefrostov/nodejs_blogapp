@@ -60,12 +60,12 @@ app.get('/bad', (req, res, next) => {
   next(new Error('My Error'));
 });
 
-app.get('/posts/new', (req, res) => {
+app.get('/new', (req, res) => {
     res.render('create')
 });
 
 
-app.post('/posts/store', (req, res) => {
+app.post('/store', (req, res) => {
     Post.create(req.body, (error, post) => {
         res.redirect('/')
     })
