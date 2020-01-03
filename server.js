@@ -7,6 +7,8 @@ const app = express();
 const port = process.env.PORT || 8081;
 const metricsInterval = Prometheus.collectDefaultMetrics();
 const mongoose = require('mongoose');
+const bodyParser = require('body-parser');
+const Post = require('./database/models/Post');
 const httpRequestDurationMicroseconds = new Prometheus.Histogram({
   name: 'http_request_duration_ms',
   help: 'Duration of HTTP requests in ms',
@@ -27,17 +29,28 @@ mongoose.connect('mongodb://localhost:27017/node-blog', { useNewUrlParser: true 
     .catch(err => console.error('Something went wrong', err))
 
 app.set('views', __dirname + '/views');
-//console.log('dirname is : ' + __dirname)
-app.get('/', (req, res, next) => {
-  setTimeout(() => {
-    res.render('index');
-    //next();
-  }, Math.round(Math.random() * 200))
+
+app.use(bodyParser.json())
+app.use(bodyParser.urlencoded({
+    extended: true
+}));
+
+
+//app.get('/', async (req, res, next) => {
+//  const posts = await Post.find({})
+//  setTimeout(() => {
+//    res.render('index', {posts} );
+//    //next();
+//  }, Math.round(Math.random() * 200))
+//});
+
+app.get('/', async (req, res) => {
+    const posts = await Post.find({})
+    res.render('index', {
+        posts
+    })
 });
 
-//app.get('/', (req, res) => {
-//	res.render('index');
-//});
 
 app.get('/test', function (req, res) {
 	res.send('hello world');
@@ -50,6 +63,22 @@ app.get('/bad', (req, res, next) => {
 app.get('/posts/new', (req, res) => {
     res.render('create')
 });
+
+
+app.post('/posts/store', (req, res) => {
+    Post.create(req.body, (error, post) => {
+        res.redirect('/')
+    })
+});
+
+
+app.get('/post/:id', async (req, res) => {
+    const post = await Post.findById(req.params.id)
+    res.render('post', {
+        post
+    })
+});
+
 
 app.get('/metrics', (req, res) => {
   res.set('Content-Type', Prometheus.register.contentType)
