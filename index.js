@@ -10,6 +10,7 @@ const metricsInterval = Prometheus.collectDefaultMetrics();
 const mongoose = require('mongoose');
 const bodyParser = require('body-parser');
 const Post = require('./database/models/Post');
+const User = require('./database/models/User');
 const fileUpload = require("express-fileupload");
 const httpRequestDurationMicroseconds = new Prometheus.Histogram({
   name: 'http_request_duration_ms',
@@ -40,6 +41,8 @@ app.use(bodyParser.urlencoded({
     extended: true
 }));
 
+const storePost = require('./middleware/storePost')
+app.use('/store', storePost)
 
 //app.get('/', async (req, res, next) => {
 //  const posts = await Post.find({})
@@ -92,6 +95,24 @@ app.get('/post/:id', async (req, res) => {
         post
     })
 });
+
+app.get('/auth/register', (req,res) => {
+        res.render('register')
+});
+
+
+app.post('/users/register', (req,res) => {
+        User.create(req.body, (error, user) => {
+        if (error) {
+            return res.redirect('/auth/register')
+        }
+        res.redirect('/')
+    })
+
+});
+
+
+
 
 
 app.get('/metrics', (req, res) => {
