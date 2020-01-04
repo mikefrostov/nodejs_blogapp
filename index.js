@@ -8,10 +8,17 @@ const app = express();
 const port = process.env.PORT || 8081;
 const metricsInterval = Prometheus.collectDefaultMetrics();
 const mongoose = require('mongoose');
+const connectMongo = require('connect-mongo');
 const bodyParser = require('body-parser');
 const Post = require('./database/models/Post');
 const User = require('./database/models/User');
 const fileUpload = require("express-fileupload");
+const bcrypt = require('bcrypt');
+const auth = require("./middleware/auth");
+const storePost = require('./middleware/storePost')
+const redirectIfAuthenticated = require('./middleware/redirectIfAuthenticated');
+const edge = require("edge.js");
+const expressSession = require('express-session');
 const httpRequestDurationMicroseconds = new Prometheus.Histogram({
   name: 'http_request_duration_ms',
   help: 'Duration of HTTP requests in ms',
@@ -25,12 +32,29 @@ app.use((req, res, next) => {
   next();
 });
 
+const mongoStore = connectMongo(expressSession);
+ 
+app.use(expressSession({
+    secret: 'secret',
+    store: new mongoStore({
+        mongooseConnection: mongoose.connection
+    })
+}));
+
+app.use(expressSession({
+    secret: 'secret'
+}));
 app.use(fileUpload());
 app.use(express.static('public'));
 app.use(expressEdge);
 mongoose.connect('mongodb://localhost:27017/node-blog', { useNewUrlParser: true })
     .then(() => 'You are now connected to Mongo!')
     .catch(err => console.error('Something went wrong', err))
+
+app.use('*', (req, res, next) => {
+    edge.global('auth', req.session.userId)
+    next()
+});
 
 
 app.set('views', __dirname + '/views');
@@ -41,7 +65,6 @@ app.use(bodyParser.urlencoded({
     extended: true
 }));
 
-const storePost = require('./middleware/storePost')
 app.use('/store', storePost)
 
 //app.get('/', async (req, res, next) => {
@@ -68,12 +91,19 @@ app.get('/bad', (req, res, next) => {
   next(new Error('My Error'));
 });
 
-app.get('/new', (req, res) => {
-    res.render('create')
+app.get('/new', (req, res, next) => {
+         
+    if (req.session.userId) {
+         res.render('create');
+    } 
+    else { 
+         res.redirect('/auth/login')
+    }
+
 });
 
 
-app.post('/store', (req, res) => {
+app.post('/store', auth, storePost, (req, res) => {
     const {
         image
     } = req.files
@@ -96,12 +126,12 @@ app.get('/post/:id', async (req, res) => {
     })
 });
 
-app.get('/auth/register', (req,res) => {
+app.get('/auth/register', redirectIfAuthenticated, (req,res) => {
         res.render('register')
 });
 
 
-app.post('/users/register', (req,res) => {
+app.post('/users/register', redirectIfAuthenticated, (req,res) => {
         User.create(req.body, (error, user) => {
         if (error) {
             return res.redirect('/auth/register')
@@ -112,7 +142,41 @@ app.post('/users/register', (req,res) => {
 });
 
 
+app.get('/auth/login', redirectIfAuthenticated, (req, res) => {
+        res.render('login');
+});
 
+app.post('/users/login', redirectIfAuthenticated, (req, res) => {
+        const {
+        email,
+        password
+    } = req.body;
+	User.findOne({
+        email
+    }, (error, user) => {
+        if (user) {
+            // compare passwords.
+            bcrypt.compare(password, user.password, (error, same) => {
+                if (same) {
+                    // store user session.
+                    req.session.userId = user._id
+		    res.redirect('/')
+                } else {
+                    res.redirect('/auth/login')
+                }
+            })
+        } else {
+            return res.redirect('/auth/login')
+        }
+    })
+});
+
+
+app.get('/auth/logout', (req, res) => {
+	req.session.destroy(() => {
+        res.redirect('/');
+    })
+});
 
 
 app.get('/metrics', (req, res) => {
